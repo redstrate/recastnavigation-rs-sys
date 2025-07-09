@@ -92,7 +92,7 @@ fn build_recast() -> (PathBuf, Vec<PathBuf>, HashMap<String, Option<String>>) {
 
   let lib_destination = lib_builder.build();
   (
-    lib_destination.join("lib"),
+    lib_destination.join("lib64"),
     vec![
       "recastnavigation/Recast/Include".into(),
       "recastnavigation/Detour/Include".into(),
@@ -144,7 +144,7 @@ fn generate_recast_bindings(
 
     if is_windows() && is_32_bit() {
       if is_nightly() {
-        builder = builder.rust_target(bindgen::RustTarget::Nightly);
+        builder = builder.rust_target(bindgen::RustTarget::nightly());
       } else {
         println!("cargo:warning=Windows 32 bit uses the \"thiscall\" ABI. This feature is not enabled, so compilation may fail! Consider using nightly Rust, which enables this feature.");
       }
