@@ -4,20 +4,8 @@ use cmake::Config;
 
 fn main() {
   println!("cargo:rerun-if-env-changed=PROFILE");
-  println!("cargo:rerun-if-env-changed=RECAST_NO_VENDOR");
-  println!("cargo:rerun-if-env-changed=RECAST_VENDOR");
 
-  let lib_destination;
-  let include_dirs;
-  let defines;
-  if env::var("RECAST_NO_VENDOR").unwrap_or("false".into()) == "true" {
-    (lib_destination, include_dirs, defines) = find_recast().unwrap();
-  } else if env::var("RECAST_VENDOR").unwrap_or("false".into()) == "true" {
-    (lib_destination, include_dirs, defines) = build_recast();
-  } else {
-    (lib_destination, include_dirs, defines) =
-      find_recast().unwrap_or_else(|| build_recast());
-  }
+  let (lib_destination, include_dirs, defines) = build_recast();
 
   link_cpp_std();
 
@@ -81,64 +69,6 @@ fn lib_names() -> Vec<String> {
     root_names.iter().map(|root: &&str| root.to_string() + "-d").collect()
   } else {
     root_names.iter().map(|root: &&str| root.to_string()).collect()
-  }
-}
-
-fn lib_name_to_file_name(lib_name: &str) -> String {
-  if is_windows() {
-    format!("{}.lib", lib_name)
-  } else {
-    format!("lib{}.a", lib_name)
-  }
-}
-
-fn find_recast(
-) -> Option<(PathBuf, Vec<PathBuf>, HashMap<String, Option<String>>)> {
-  let lib = match pkg_config::Config::new().probe("recastnavigation") {
-    Ok(value) => value,
-    Err(error) => {
-      println!("pkg_config failed to find RecastNavigation: {}", error);
-      return None;
-    }
-  };
-
-  if lib.link_paths.len() != 1 {
-    println!(
-      "cargo:warning=Expected 1 link path from recastnavigation, got {:?}",
-      lib.link_paths
-    );
-    return None;
-  }
-
-  let lib_dir = &lib.link_paths[0];
-
-  let lib_names = lib_names();
-
-  let check_libs = lib_names
-    .iter()
-    .map(|lib_name| {
-      lib_dir.join(lib_name_to_file_name(lib_name)).as_path().exists()
-    })
-    .collect::<Vec<bool>>();
-  if check_libs.iter().all(|b| *b) {
-    Some((lib_dir.clone(), lib.include_paths, lib.defines))
-  } else {
-    let missing_libs = lib_names
-      .iter()
-      .zip(check_libs)
-      .filter_map(
-        |(lib_name, present)| {
-          if present {
-            None
-          } else {
-            Some(lib_name.as_str())
-          }
-        },
-      )
-      .collect::<Vec<&str>>();
-    println!("cargo:warning=Found recastnavigation using pkgconfig at {}, but not all libraries were present. Missing libs: {:?}", lib_dir.display(), missing_libs);
-
-    None
   }
 }
 
