@@ -5,11 +5,13 @@ use cmake::Config;
 fn main() {
   println!("cargo:rerun-if-env-changed=PROFILE");
 
-  let (lib_destination, include_dirs, defines) = build_recast();
+  let (lib_dirs, include_dirs, defines) = build_recast();
 
   link_cpp_std();
 
-  println!("cargo:rustc-link-search=native={}", lib_destination.display());
+  for dir in lib_dirs {
+    println!("cargo:rustc-link-search=native={}", dir.display());
+  }
 
   for lib in lib_names() {
     println!("cargo:rustc-link-lib=static={}", lib);
@@ -72,7 +74,7 @@ fn lib_names() -> Vec<String> {
   }
 }
 
-fn build_recast() -> (PathBuf, Vec<PathBuf>, HashMap<String, Option<String>>) {
+fn build_recast() -> (Vec<PathBuf>, Vec<PathBuf>, HashMap<String, Option<String>>) {
   println!("cargo:rerun-if-changed=recastnavigation");
   let mut lib_builder = Config::new("recastnavigation");
   lib_builder
@@ -92,7 +94,10 @@ fn build_recast() -> (PathBuf, Vec<PathBuf>, HashMap<String, Option<String>>) {
 
   let lib_destination = lib_builder.build();
   (
-    lib_destination.join("lib64"),
+    vec![
+      lib_destination.join("lib"),
+      lib_destination.join("lib64")
+    ],
     vec![
       "recastnavigation/Recast/Include".into(),
       "recastnavigation/Detour/Include".into(),
